@@ -13,16 +13,30 @@ class NetworkRoutingSolver:
         assert( type(network) == CS312Graph )
         self.network = network
 
+    def printNodes( self, lst ):
+        for i in lst:
+            print("\t" + str(lst.index(i)) + " ::= " + str(i) )
+            for n in i.neighbors:
+                print("\t\t " + str(n) )
+
     def getShortestPath( self, destIndex ):
         self.dest = destIndex
+        print("\ndest = " + str(destIndex))
+
+
         # TODO: RETURN THE SHORTEST PATH FOR destIndex
         #       INSTEAD OF THE DUMMY SET OF EDGES BELOW
-        #       IT'S JUST AN EXAMPLE OF THE FORMAT YOU'LL 
+        #       IT'S JUST AN EXAMPLE OF THE FORMAT YOU'LL
         #       NEED TO USE
         path_edges = []
         total_length = 0
         node = self.network.nodes[self.source]
         edges_left = 3
+
+        print("\nself.network.nodes:")
+        self.printNodes(self.network.nodes)
+
+
         while edges_left > 0:
             edge = node.neighbors[2]
             path_edges.append( (edge.src.loc, edge.dest.loc, '{:.0f}'.format(edge.length)) )
@@ -34,9 +48,23 @@ class NetworkRoutingSolver:
     def computeShortestPaths( self, srcIndex, use_heap=False ):
         self.source = srcIndex
         t1 = time.time()
+
+        if ( use_heap ):
+            print("\nUSING HEAP\n\n")
+        else:
+            print("\nUSING Array\n\n")
+            queue = []
+            for node in self.network.nodes:
+                queue.append( node )
+
+
+
+
         # TODO: RUN DIJKSTRA'S TO DETERMINE SHORTEST PATHS.
         #       ALSO, STORE THE RESULTS FOR THE SUBSEQUENT
         #       CALL TO getShortestPath(dest_index)
         t2 = time.time()
         return (t2-t1)
 
+    def makeArrayQueue( self, nodes ):
+         return nodes

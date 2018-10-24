@@ -82,7 +82,7 @@ class PointLineView( QWidget ):
 			self.edgeList[edgeColor].append( edge )
 		else:
 			self.edgeList[edgeColor] = [edge]
-		midp = QPointF( (edge.x1()+edge.x2())/2.0, 
+		midp = QPointF( (edge.x1()+edge.x2())/2.0,
 						(edge.y1()+edge.y2())/2.0 )
 		if edgeColor in self.labelList.keys():
 			self.labelList[edgeColor].append( (midp,label) )
@@ -94,7 +94,7 @@ class PointLineView( QWidget ):
 		scale = self.getScale()
 		self.pointclicked.emit(self.clicknode,QPointF((e.x()-self.width())/scale+2,(self.height()-e.y())/scale-1))
 		if self.clicknode == 'start':
-			self.clicknode = 'end' 
+			self.clicknode = 'end'
 		else:
 			self.clicknode = 'start'
 
@@ -168,7 +168,7 @@ class Proj3GUI( QMainWindow ):
 		self.initUI()
 		self.solver = NetworkRoutingSolver()
 		self.genParams = (None, None)
-			   
+
 	def newPoints(self):
 		# TODO - ERROR CHECKING!!!!
 		seed = int(self.randSeed.text())
@@ -235,7 +235,7 @@ class Proj3GUI( QMainWindow ):
 			self.heapTime.setText('{:.6f}s'.format(heap_time))
 			if not array_path:
 				self.arrayTime.setText('')
-				self.speedup.setText('')   
+				self.speedup.setText('')
 		if array_path:
 			cost = array_path['cost']
 			for start,end,lbl in array_path['path']:
@@ -264,7 +264,7 @@ class Proj3GUI( QMainWindow ):
 			doHeap = True
 			array_path = None
 			array_time = None
-		else:								
+		else:
 			doArray = True
 			doHeap = True
 		if doArray:
@@ -316,7 +316,7 @@ class Proj3GUI( QMainWindow ):
 		else:
 			widget.setStyleSheet( '' )
 		return '' if retval==None else retval
-		
+
 	def checkPathInputs(self):
 		if not self.graphReady:
 			self.computeCost.setEnabled(False)
@@ -452,7 +452,7 @@ class Proj3GUI( QMainWindow ):
 if __name__ == '__main__':
 	# This line allows CNTL-C in the terminal to kill the program
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
-	
+
 	app = QApplication(sys.argv)
 	w = Proj3GUI()
 	sys.exit(app.exec())

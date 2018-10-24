@@ -51,25 +51,23 @@ class NetworkRoutingSolver:
         print("\nIN getShortestPath()")
         print("src = " + str(self.source))
         print("dest = " + str(self.dest))
-        self.printDict()
-
-        d = self.network.nodes[ self.dest ]
-        print("dest id = " + str(d.node_id))
-
+        # self.printDict()
 
         node = self.network.nodes[ self.dest ]
         prev_id = self.result[ node ].prev.node_id
         total_length = self.result[ node ].dist
-        print("\ttotal_length = " + str(total_length))
 
-        while prev_id != self.source:
+        while node.node_id != self.source:
             # directed edge coming from node.prev -> node
             edge = next( (x for x in self.network.nodes[ prev_id ].neighbors if x.dest.node_id == node.node_id), None)
             path_edges.append( (edge.src.loc, edge.dest.loc, '{:.0f}'.format(edge.length)) )
             # set node to node.prev to trace back further
             node = self.network.nodes[ prev_id ]
             # prev_id is the id of prev( node )
-            prev_id = self.result[ node ].prev.node_id
+            if node.node_id != self.source:
+                prev_id = self.result[ node ].prev.node_id
+
+
 
 
         return {'cost':total_length, 'path':path_edges}
@@ -99,9 +97,10 @@ class NetworkRoutingSolver:
 
         if ( use_heap ):
             print("\nUSING HEAP\n********************************************************************\n")
+            queue = self.makeQueue( srcIndex, True )
         else:
             print("\nUSING Array\n********************************************************************\n")
-            queue = self.makeQueue( srcIndex, False)
+            queue = self.makeQueue( srcIndex, False )
             # iter = -1
             prev_queue_len = len(queue)
             while len( queue ) > 0:
@@ -148,7 +147,7 @@ class NetworkRoutingSolver:
     def deleteMin( self, queue, use_heap=False ):
         if ( type(queue) == list ):
             # print("\nDeleting Min in Array")
-            min_dist = 100000000000000000000
+            min_dist = 1000000000000
             min_node = None
             for node in queue:
                 if self.result[ node ].dist != None:

@@ -15,23 +15,6 @@ class NetworkRoutingSolver:
         self.network = network
 
     result = dict()
-    def printQueue( self, lst ):
-        for i in lst:
-            print("\t" + str(i.node_id) + " ::= " + str(i) )
-            print("\t\tdist = " + str(self.result[ i ].dist))
-            print("\t\tprev_id = " + str(self.result[ i ].prev))
-            # for n in i.neighbors:
-            #     print("\t\t " + str(n) )
-
-    def printDict( self ):
-        print("Printing dict:")
-        c = 20
-        for k,v in self.result.items():
-            c -= 1
-            if c == 0:
-                break
-            print("\n\tkey = " + str(k.node_id) )
-            print("\tvalue is:\tdist = " + str(v.dist) + "\n\t\t\tprev(id) = " + str(v.prev))
 
     class NodeStructure:
         def __init__( self, new_dist, new_prev ):
@@ -43,11 +26,6 @@ class NetworkRoutingSolver:
 
         def setPrev( self, new_prev ):
             self.prev = new_prev
-        #
-        # def __str__( self ):
-        #     print("\tdist = " + str(self.dist))
-        #     print("\tprev = " + str(self.prev))
-
 
     def getShortestPath( self, destIndex ):
         self.dest = destIndex
@@ -63,6 +41,8 @@ class NetworkRoutingSolver:
             prev_id = self.result[ node ].prev.node_id
             total_length = self.result[ node ].dist
 
+            # trace back: from dest -> top using prev_node of each node being looked at
+            # O(n)
             while node.node_id != self.source:
                 # directed edge coming from node.prev -> node
                 edge = next( (x for x in self.network.nodes[ prev_id ].neighbors if x.dest.node_id == node.node_id), None)
@@ -85,30 +65,45 @@ class NetworkRoutingSolver:
         t2 = time.time()
         return (t2-t1)
 
+    # let n = |V|
+    # Prority queue implementation:
+    #     Array: T(n) = O( n + n**2 ) = O( n**2 ) = O( |V|**2 )
+    #     Heap:  T(n) = O( n + nlog(n) ) = O( nlog(n) ) = O( (|V|+|E|)log(|V|) )
     def runDijkstra( self, srcIndex, use_heap=False ):
-        #set up steps: set up self.result (dict) and set s.dist = 0
+
+        # set up steps: set up look up dictionary self.result and set s.dist = 0
+        # O(n) for going through every node
         for node in self.network.nodes:
             self.result[ node ] = self.NodeStructure( None, None )
         self.result[ self.network.nodes[ srcIndex ] ].setDist( 0 )
 
+        # use ARRAY priority queue implementation
+        # T(n) = O( n + n**2 ) = O( n**2 ) = O( |V|**2 )
         if use_heap == False:
-            print("\n********************************************************************")
             print("\tUSING Array")
-            print("\n********************************************************************\n")
-            queue = self.makeQueue( srcIndex, False )
+            print("\n******************\n")
+            queue = self.makeQueue( srcIndex, False ) # O(n)
+
+            # run through at most n loops == |V| for each node in queue
+            # => O( n * n ) = O( n**2 )
             while len( queue ) > 0:
 
+                # O(n) -- go through entire queue list to return min
                 curr_node, queue = self.deleteMin( queue, False)
 
                 if curr_node == None:
-                    print("No more steps could be taken from here")
+                    # print("No more steps could be taken from here")
                     break
 
                 curr_neighbors = [ edge.dest.node_id for edge in curr_node.neighbors]
-                # for each node in list of neighbors of curr_node (at first: src, then: just deleted from queue )
+
+                # loop through 3 times
+                # for each node in list of neighbors of curr_node, calculate new distance (if applicable)
+                # then update look up dictionary self.result accordingly
                 for node in [ node for node in queue if node.node_id in curr_neighbors ]:
                     curr_length = next( (x for x in curr_node.neighbors if x.dest.node_id == node.node_id), None).length
 
+                    # dictionary get and set items are O(1) on average in terms of n
                     if self.result[ node ].dist==None :
                         self.result[ node ].dist = self.result[ curr_node ].dist + curr_length
                         self.result[ node ].prev = curr_node
@@ -117,23 +112,35 @@ class NetworkRoutingSolver:
                         self.result[ node ].prev = curr_node
                     else:
                         pass
+                    queue = self.decreaseKey( node, queue, False ) # O(1) -- don't do anything
+
+        # use HEAP priority queue implementation
+        # T(n) = O( n*log(n) + n ) = O( n*log(n) )
         else:
-            print("\n********************************************************************")
             print("\tUSING Heap")
-            print("\n********************************************************************\n")
+            print("\n******************\n")
             # queue will just be a list structure
+            # O(n) -- just put all nodes in the queue/list with srcIndex node on top (root)
             queue = self.makeQueue( srcIndex, True )
 
+            # at most n -- go through entire queue
+            # O( n * ( (log(n) + 3 * log(n) ) ) = O( n*log(n) )
             while len(queue) > 0:
+
+                # O( log(n) ) -- after getting root, remove it from heap ( O(1) ),
+                # put last node -> top. It takes at most log(n) to bubbleDown
+                # (worst case: all the way from top->bottom level => log(n) swaps )
                 curr_node, queue = self.deleteMin( queue, True )
 
                 if curr_node == None:
-                    print("No more steps could be taken from here")
+                    # print("No more steps could be taken from here")
                     break
 
                 curr_neighbors = [ edge.dest.node_id for edge in curr_node.neighbors]
 
-                # for each node in list of neighbors of curr_node (at first: src, then: just deleted from queue )
+                # loop through 3 times
+                # for each node in list of neighbors of curr_node, calculate new distance (if applicable)
+                # then update look up dictionary self.result accordingly
                 for node in [ node for node in queue if node.node_id in curr_neighbors ]:
                     curr_length = next( (x for x in curr_node.neighbors if x.dest.node_id == node.node_id), None).length
 
@@ -146,10 +153,12 @@ class NetworkRoutingSolver:
                     else:
                         pass
 
-                    queue = self.decreaseKey( node, queue )
+                    # O( log(n) ) -- bubbleUp takes O( log(n) ) for log(n) potential swap upward
+                    queue = self.decreaseKey( node, queue, True )
 
 
-
+    # O(n) -- create a list and insert all nodes into it
+    # heap is in list structure so about actually is the same big-O
     def makeQueue( self, srcIndex, use_heap=False ):
         queue = []
         # add src node in first
@@ -159,14 +168,16 @@ class NetworkRoutingSolver:
             queue.append( node )
         return queue
 
-
-    def decreaseKey( self, node, queue ):
-        parent_index = queue.index( node )
-        queue = self.bubbleUp( node, queue )
+    # O(log(n)) -- bubbleUp() takes O(log(n)) and is essentially the entire function
+    def decreaseKey( self, node, queue, use_heap=True ):
+        #parent_index = queue.index( node )
+        if use_heap == True:
+            queue = self.bubbleUp( node, queue )
         return queue
 
 
     def deleteMin( self, queue, use_heap=False ):
+        # O(n) -- go through entire queue list to return min
         if ( use_heap == False ):
             min_dist = 1000000000000
             min_node = None
@@ -178,9 +189,10 @@ class NetworkRoutingSolver:
 
             new_queue = [node for node in queue if node != min_node ]
             return min_node, new_queue
+        # O( log(n) )
         else:
             min_dist = 1000000000000
-            min_node = queue.pop(0)
+            min_node = queue.pop(0) #O(1) -- pop first item -- root
 
             # precaution: if top of heap does not have a dist, no where else to run
             if self.result[ min_node ].dist == None:
@@ -190,11 +202,16 @@ class NetworkRoutingSolver:
                 return min_node, queue
 
             # move last node to the top of heap queue
+            # O(1) -- insert right at the top of list
             queue.insert( 0, queue.pop() )
+            # O( log(n) ) -- possible log(n) swap downward through the levels of heap
             queue = self.bubbleDown( queue )
 
             return min_node, queue
 
+    # O(log(n)) -- from top node, compare to smaller of two children and make necessary swap
+    # each swap takes O(1) interms of n
+    # each swap move node down 1 level, worst case = top -> bottom => at most log(n) swaps
     def bubbleDown( self, queue ):
         index = 0
         cont = True
@@ -245,11 +262,14 @@ class NetworkRoutingSolver:
 
         return queue
 
+    # O(log(n)) -- similar to Bubble Down
+    # -- check if you could swap (child and its parent)
+    # worst case: go from bottom level -> top ==> log(n) swaps
     def bubbleUp( self, node , queue ):
         index = queue.index( node )
         cont = True
 
-        while ( cont ):
+        while ( cont ): #worst case: log(n) loops
             if index == 0:
                 return queue
 
@@ -265,7 +285,9 @@ class NetworkRoutingSolver:
         return queue
 
 
-
+    # check conditions between parent and child to be swapped.
+    # if both have dist != None (infinity) then perform swap if necessary
+    # O(1) #in terms of n = number of nodes
     def swap( self, child_index, index, queue ):
         child_dist = self.result[ queue[ child_index ] ].dist
         res_index = index
@@ -281,6 +303,9 @@ class NetworkRoutingSolver:
 
         return queue, res_index
 
+    # O(1) -- dict lookup as hash table takes constant time on average
+    # test if both children have distance != None (infinity -- not reachable)
+    # by look up using dict structure self.result
     def testDist( self, left_index, right_index, queue ):
         left_dist = self.result[ queue[ left_index ] ].dist
         right_dist = self.result[ queue[ right_index ] ].dist

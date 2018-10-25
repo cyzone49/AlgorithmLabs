@@ -18,12 +18,18 @@ class NetworkRoutingSolver:
     def printQueue( self, lst ):
         for i in lst:
             print("\t" + str(i.node_id) + " ::= " + str(i) )
+            print("\t\tdist = " + str(self.result[ i ].dist))
+            print("\t\tprev_id = " + str(self.result[ i ].prev))
             # for n in i.neighbors:
             #     print("\t\t " + str(n) )
 
     def printDict( self ):
         print("Printing dict:")
+        c = 20
         for k,v in self.result.items():
+            c -= 1
+            if c == 0:
+                break
             print("\n\tkey = " + str(k.node_id) )
             print("\tvalue is:\tdist = " + str(v.dist) + "\n\t\t\tprev(id) = " + str(v.prev))
 
@@ -38,36 +44,45 @@ class NetworkRoutingSolver:
         def setPrev( self, new_prev ):
             self.prev = new_prev
 
+        def __str__( self ):
+            print("\tdist = " + str(self.dist))
+            print("\tprev = " + str(self.prev))
+
 
     def getShortestPath( self, destIndex ):
         self.dest = destIndex
+
         # TODO: RETURN THE SHORTEST PATH FOR destIndex
         #       INSTEAD OF THE DUMMY SET OF EDGES BELOW
         #       IT'S JUST AN EXAMPLE OF THE FORMAT YOU'LL
         #       NEED TO USE
         path_edges = []
         total_length = 0
-        # node = self.network.nodes[self.source]
-        # edges_left = 3
 
         print("\nIN getShortestPath()")
         print("src = " + str(self.source))
         print("dest = " + str(self.dest))
-        # self.printDict()
+        self.printDict()
 
         node = self.network.nodes[ self.dest ]
-        prev_id = self.result[ node ].prev.node_id
-        total_length = self.result[ node ].dist
+        print("node = " + str(node.node_id))
+        print("node in result = " + str(self.result[ node ].__str__() ))
 
-        while node.node_id != self.source:
-            # directed edge coming from node.prev -> node
-            edge = next( (x for x in self.network.nodes[ prev_id ].neighbors if x.dest.node_id == node.node_id), None)
-            path_edges.append( (edge.src.loc, edge.dest.loc, '{:.0f}'.format(edge.length)) )
-            # set node to node.prev to trace back further
-            node = self.network.nodes[ prev_id ]
-            # prev_id is the id of prev( node )
-            if node.node_id != self.source:
-                prev_id = self.result[ node ].prev.node_id
+        if ( self.result[ node ].dist == None ):
+            print("destination node is unreachable")
+        else:
+            prev_id = self.result[ node ].prev.node_id
+            total_length = self.result[ node ].dist
+
+            while node.node_id != self.source:
+                # directed edge coming from node.prev -> node
+                edge = next( (x for x in self.network.nodes[ prev_id ].neighbors if x.dest.node_id == node.node_id), None)
+                path_edges.append( (edge.src.loc, edge.dest.loc, '{:.0f}'.format(edge.length)) )
+                # set node to node.prev to trace back further
+                node = self.network.nodes[ prev_id ]
+                # prev_id is the id of prev( node )
+                if node.node_id != self.source:
+                    prev_id = self.result[ node ].prev.node_id
 
 
 
@@ -77,12 +92,13 @@ class NetworkRoutingSolver:
     def computeShortestPaths( self, srcIndex, use_heap=False ):
         self.source = srcIndex
         t1 = time.time()
+        print("\n\n\nIn computeShortestPaths. About to run Dijkstra")
         self.runDijkstra( srcIndex, use_heap )
         # TODO: RUN DIJKSTRA'S TO DETERMINE SHORTEST PATHS.
         #       ALSO, STORE THE RESULTS FOR THE SUBSEQUENT
         #       CALL TO getShortestPath(dest_index)
-        print("\n\n\n\nDONE running DIJKSTRA")
-        self.printDict()
+        print("\n\n\nDONE running DIJKSTRA")
+        # self.printDict()
         t2 = time.time()
         return (t2-t1)
 
@@ -143,7 +159,7 @@ class NetworkRoutingSolver:
             queue = self.makeQueue( srcIndex, True )
             print("before doing anything: printing queue: ")
             self.printQueue( queue )
-            print("len queue = " + str(len(queue)))
+            # print("len queue = " + str(len(queue)))
 
             # self.keys = [None] * len( queue )
             #
@@ -152,19 +168,20 @@ class NetworkRoutingSolver:
 
             while len(queue) > 0:
                 print("in while loop")
-
+                print("about to start deleteMin ")
                 curr_node, queue = self.deleteMin( queue, True )
+
 
                 # debug
                 print("finish deleteMin")
-                print("\tcurr_node = " + str(curr_node.node_id ))
-                print("\tqueue: ")
-                self.printQueue( queue )
+                # print("\tqueue: ")
+                # self.printQueue( queue )
 
                 if curr_node == None:
                     print("No more steps could be taken from here")
                     # self.printDict()
                     break
+                print("\tcurr_node = " + str(curr_node.node_id ))
                 curr_neighbors = [ edge.dest.node_id for edge in curr_node.neighbors]
 
                 # for each node in list of neighbors of curr_node (at first: src, then: just deleted from queue )
@@ -185,15 +202,17 @@ class NetworkRoutingSolver:
                         pass
 
                     queue = self.decreaseKey( node, queue )
-                self.printDict()
+                # self.printDict()
+                print("end of while loop. queue = ")
+                self.printQueue( queue )
 
 
     def decreaseKey( self, node, queue ):
         parent_index = queue.index( node )
         queue = self.bubbleUp( node, queue )
-        print("\tDone bubbling up ")
-        print("Finish decreaseKey. curren queue = ")
-        self.printQueue( queue )
+        # print("\tDone bubbling up ")
+        # print("Finish decreaseKey. curren queue = ")
+        # self.printQueue( queue )
         return queue
 
 
@@ -217,8 +236,8 @@ class NetworkRoutingSolver:
             self.printQueue( queue )
             min_dist = 1000000000000
             min_node = queue.pop(0)
-            print("queue after popping top node = " + str(min_node.node_id))
-            self.printQueue( queue )
+            # print("queue after popping top node = " + str(min_node.node_id) + " has length = " + str(len(queue)) + " is:")
+            # self.printQueue( queue )
 
             # precaution: if top of heap does not have a dist, no where else to run
             if self.result[ min_node ].dist == None:
@@ -229,20 +248,25 @@ class NetworkRoutingSolver:
                 print("Finish with entire queue. returning")
                 return min_node, queue
 
+
             # move last node to the top of heap queue
             queue.insert( 0, queue.pop() )
+            # print("queue after before bubbling down (just inserted last -> top)")
+            # self.printQueue( queue )
             queue = self.bubbleDown( queue )
-            print("\tDone bubbling down\n ")
+            # print("\tDone bubbling down\n ")
+            # self.printQueue( queue )
 
             return min_node, queue
 
     def bubbleDown( self, queue ):
         print("\tat Bubble Down\n")
-        self.printQueue( queue )
+        # self.printQueue( queue )
         # self.printDict()
         index = 0
         cont = True
         while (cont):
+            print("\n\tin another while loop to swap in bubble down")
             print("\tCurrent node.node_id = " + str( queue[ index ].node_id ) )
             has_left_child = False
             has_right_child = False
@@ -262,21 +286,39 @@ class NetworkRoutingSolver:
                 print("\tcurrent node has no children")
                 cont = False
             elif has_left_child == True and has_right_child == False:
+                temp = index
                 queue, index = self.swap( left_child_index, index, queue )
+                # if index did not change -> did not swap! => Done Bubble Down
+                if temp == index:
+                    cont = False
             elif has_left_child == False and has_right_child == True:
+                temp = index
                 queue, index = self.swap( right_child_index, index, queue )
+                # if index did not change -> did not swap! => Done Bubble Down
+                if temp == index:
+                    cont = False
             else:
                 test_dist_result = self.testDist( left_child_index, right_child_index, queue )
 
                 if test_dist_result == self.result[ queue[ left_child_index ] ].dist:
                     print("\n\tswapping with left")
+                    temp = index
                     queue, index = self.swap( left_child_index, index, queue )
+                    # if index did not change -> did not swap! => Done Bubble Down
+                    if temp == index:
+                        cont = False
                 elif test_dist_result == self.result[ queue[ right_child_index ] ].dist:
                     print("\n\tswapping with right")
+                    temp = index
                     queue, index = self.swap( right_child_index, index, queue )
+                    # if index did not change -> did not swap! => Done Bubble Down
+                    if temp == index:
+                        cont = False
                 else:
                     print("\n\tcannot swap. testDist returns -1 => both left and right have no Dist")
                     cont = False
+                print("\n\tqueue after swapping one step")
+                # self.printQueue( queue )
 
         return queue
 
@@ -289,7 +331,7 @@ class NetworkRoutingSolver:
 
 
         cont = True
-        c = 4
+        # c = 4
         while ( cont ):
             print("\n\t\tIn while loop of bubble up")
             if index == 0:
@@ -301,7 +343,7 @@ class NetworkRoutingSolver:
             print("\t\tCurrent parent node = " + str( queue[ parent_index ].node_id ) )
 
             if (self.result[ queue[ parent_index ] ].dist == None ) or (self.result[ queue[ parent_index ] ].dist > self.result[ queue[ index ] ].dist) :
-                print("\t\tYes. dist(parent) = " + str( self.result[ queue[ parent_index ] ].dist ) + " > " + str( self.result[ queue[ index ] ].dist ) + " = curr dist"  )
+                # print("\t\tYes. dist(parent) = " + str( self.result[ queue[ parent_index ] ].dist ) + " > " + str( self.result[ queue[ index ] ].dist ) + " = curr dist"  )
                 temp = queue[ index ]
                 queue[ index ] = queue[ parent_index ]
                 queue[ parent_index ] = temp
@@ -309,10 +351,10 @@ class NetworkRoutingSolver:
             else:
                 print("\t\tNope " + str( self.result[ queue[ parent_index ] ].dist ) + " > " + str( self.result[ queue[ index ] ].dist ) + " = curr dist"  )
                 cont = False
-
-            c -= 1
-            if c == 0:
-                break
+            #
+            # c -= 1
+            # if c == 0:
+            #     break
 
         return queue
 
@@ -322,9 +364,7 @@ class NetworkRoutingSolver:
         print("\n\tStarting swap: child_index in queue = " + str(child_index) + ", index in queue = " + str(index))
         child_dist = self.result[ queue[ child_index ] ].dist
         res_index = index
-        if child_dist == None:
-            print("\t\tAt Swap: queue[ child_index ] = " + str( queue[ child_index ].node_id ) + " has dist = None")
-        else:
+        if child_dist != None:
             # if current node's key/dist > its child's key/dist, swap
             curr_dist = self.result[ queue[ index ] ].dist
             print("\t\tcurr_node_id = " + str( queue[ index ].node_id ) + " with dist = " + str(curr_dist))
@@ -337,25 +377,29 @@ class NetworkRoutingSolver:
                 res_index = child_index
             else:
                 print("\t\t\tchild_dist = " + str(child_dist) + " >= index.dist = " + str(self.result[ queue[ index ] ].dist))
+        if res_index == index:
+            print("\t\t\tDid not swap. either because child_dist == None OR child_dist >= curr_dist (parent)")
+
 
         return queue, res_index
 
     def testDist( self, left_index, right_index, queue ):
-        print("\n\tStarting testDist")
+        # print("\n\tStarting testDist")
         left_dist = self.result[ queue[ left_index ] ].dist
         right_dist = self.result[ queue[ right_index ] ].dist
         res = -1
         if left_dist == None and right_dist == None:
-            print("\t\tBoth left and right children have no dist")
+            # print("\t\tBoth left and right children have no dist")
+            return res
         elif left_dist != None and right_dist == None:
             res = left_dist
-            print("\t\tdone. res = " + str(res) + " = left_dist")
+            # print("\t\tdone. res = " + str(res) + " = left_dist")
         elif left_dist == None and right_dist != None:
             res = right_dist
-            print("\t\tdone. res = " + str(res) + " = right_dist")
+            # print("\t\tdone. res = " + str(res) + " = right_dist")
         else:
             res = left_dist if left_dist < right_dist else right_dist
-            print("\t\tdone. res = " + str(res) + " where both left and right children have dist")
+            # print("\t\tdone. res = " + str(res) + " where both left and right children have dist")
 
         return res
 

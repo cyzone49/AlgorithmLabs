@@ -49,7 +49,7 @@ class Proj4GUI( QMainWindow ):
 		self.statusBar.showMessage('Processing...')
 		app.processEvents()
 		start = time.time()
-		self.processed_results = self.solver.align( sequences, 
+		self.processed_results = self.solver.align( sequences,
 													self.table,
 													banded=self.banded.isChecked(),
 													align_length=int(self.alignLength.text()))
@@ -60,7 +60,7 @@ class Proj4GUI( QMainWindow ):
 		if nm > 0:
 			self.statusBar.showMessage('Done.  Time taken: {} mins and {:3.3f} seconds.'.format(nm,ns))
 		else:
-			self.statusBar.showMessage('Done.  Time taken: {:3.3f} seconds.'.format(ns))		
+			self.statusBar.showMessage('Done.  Time taken: {:3.3f} seconds.'.format(ns))
 		self.processButton.setEnabled(False)
 		self.clearButton.setEnabled(True)
 		self.repaint()
@@ -94,7 +94,7 @@ class Proj4GUI( QMainWindow ):
 		print('lbls: {} and {}'.format(self.seqs[i][1],self.seqs[j][1]))
 
 		if self.processed_results and j >= i:
-			print('in if')
+			# print('in if')
 			self.seq1n_lbl.setText( 'Label {}: '.format(i+1) )
 			self.seq1c_lbl.setText( 'Sequence {}: '.format(i+1) )
 			self.seq2c_lbl.setText( 'Sequence {}: '.format(j+1) )
@@ -110,7 +110,7 @@ class Proj4GUI( QMainWindow ):
 		FILENAME = 'genomes.txt'
 		raw = open(FILENAME,'r').readlines()
 		sequences = {}
-		
+
 		i = 0
 		cur_id	= ''
 		cur_str = ''
@@ -228,7 +228,7 @@ class Proj4GUI( QMainWindow ):
 		h.addLayout(vleft)
 		h.addLayout(vright)
 		vbox.addLayout(h)
-		
+
 		h = QHBoxLayout()
 		h.addStretch(1)
 		h.addWidget( self.processButton )
@@ -255,7 +255,7 @@ class Proj4GUI( QMainWindow ):
 if __name__ == '__main__':
 	# This line allows CNTL-C in the terminal to kill the program
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
-	
+
 	app = QApplication(sys.argv)
 	w = Proj4GUI()
 	sys.exit(app.exec())

@@ -92,7 +92,7 @@ class GeneSequencing:
 		# print("\n\ntb_table is \n" + str(tb_table))
 
 		dir = self.traceDirection( tb_table )
-		# print("\tDone back tracing. dir= " + str(dir))
+		print("\tDone back tracing. dir= " + str(dir))
 
 		seq1 = self.getSeq( t1, dir, False )
 		seq2 = self.getSeq( t2, dir, True )
@@ -120,15 +120,14 @@ class GeneSequencing:
 	def calcCostBanded( self, t1, t2):
 		print("\n\nBANDED")
 		curr = np.full( ( len(t1) + 1, 2*MAXINDELS+1 ), np.inf )
-		# curr = np.zeros((len(t1)+1, 2*MAXINDELS+1))
+		tb_table = np.full( curr.shape, np.inf )
 
-		# row: (horizontal) t1 ---> len(t1) + 1
 		base = np.arange(0, ( MAXINDELS + 1 ) * INDEL, INDEL )
 		curr[0] = np.append( base, np.full((1,MAXINDELS), np.inf) )
 		curr[:,0] = np.append( base, np.full((1, len(t1) - MAXINDELS ), np.inf) )
 
-		print("curr = ")
-		print(str(curr))
+		tb_table[0] = np.append( [0] + [ SIDE ] * MAXINDELS, np.full((1,MAXINDELS), np.inf) )
+		tb_table[:,0] = np.append( [0] + [ UP ] * MAXINDELS, np.full((1, len(t1) - MAXINDELS ), np.inf) )
 
 		r = 1
 		center = 1
@@ -140,6 +139,8 @@ class GeneSequencing:
 			curr_index = offset # this is current column in curr [0:6]
 			curr_row = np.empty( 2 * MAXINDELS + 1 )
 			curr_row.fill(np.inf)
+			tb_row = np.empty( 2 * MAXINDELS + 1 )
+			tb_row.fill(np.inf)
 
 			print("\n\n\ncurr_index= " + str(curr_index) + "\n")
 			print("curr_row = " + str(curr_row))
@@ -154,15 +155,11 @@ class GeneSequencing:
 				elif c == 0: # just the rows including base case of t1 (horizontal)
 					print("\tAt base horizontal. Already calculated so leave alone")
 					curr_row[curr_index] = curr[r][c]
+					tb_row[curr_index] = UP
 					curr_index += 1
 
 				elif c == ( len(t2) + 1 ): # just the rows that include last row
 					print("\tAt the last column. Returning")
-					# print("\t\tcurr_row = " + str(curr_row))
-					# if c > MAXINDELS:
-					# 	curr_row = self.cutRow( curr_row )
-					# print("\t\tcurr_row is now = " + str(curr_row))
-					curr[r] = curr_row
 					break
 				else:
 					print("\t[ r = " + str(r) + " ][ c = " + str(c) + " ] with letters: t1[] = " + t1[r-1] + ", t2[] = " + t2[c-1])
@@ -171,49 +168,51 @@ class GeneSequencing:
 						print("\t\tMATCH")
 						# d = curr[ r - 1 ][ c - 1 ] + MATCH
 						curr_row[ curr_index - offset ] = curr[ r - 1 ][ curr_index - 1 ] + MATCH
+						tb_row[ curr_index - offset ] = DIA
 
 
 					else:
-						print("\n\tThree things to consider:")
+						# print("\n\tThree things to consider:")
 						if curr_index > 6:
 							up = np.inf
-							print("\t\tleft is just inf. outo of bound.")
+							# print("\t\tleft is just inf. outo of bound.")
 						else:
 							up = curr[ r - 1 ][ curr_index ]
-							print("\t\tcurr["+str(r-1)+"]["+str(curr_index)+"] = " + str(up) )
+							# print("\t\tcurr["+str(r-1)+"]["+str(curr_index)+"] = " + str(up) )
 						diagonal = curr[ r - 1 ][ curr_index - 1 ]
-						print("\t\tcurr["+str(r-1)+"]["+str(curr_index-1)+"] = " + str(diagonal) )
+						# print("\t\tcurr["+str(r-1)+"]["+str(curr_index-1)+"] = " + str(diagonal) )
 						left = curr[ r ][ curr_index - offset - 1 ]
-						print("\t\tcurr["+str(r)+"]["+str(curr_index - offset -1)+"] = " + str(left))
+						# print("\t\tcurr["+str(r)+"]["+str(curr_index - offset -1)+"] = " + str(left))
 
 
 						min_list = [ diagonal, up, left ]
 						print('\t\tminlist = ' + str(min_list))
 						min_val = min( min_list )
-						print("\t\tminval = " + str(min_val))
+						# print("\t\tminval = " + str(min_val))
 						if diagonal == min_val:
 							print("\t\t=>>  Diagonal --- sub ")
 							# tb_table[r][c] = DIA
 							curr_row[ curr_index - offset ] = min_val + SUB
+							tb_row[ curr_index - offset ] = DIA
 
 
 
 						else:
 							if up == min_val:
 								print("\t\t=>>  UP --- ins ")
-								# tb_table[r][c] = UP
+								tb_row[ curr_index - offset ] = UP
 							elif left == min_val:
 								print("\t\t=>>  SIDE --- del ")
-								# tb_table[r][c] = SIDE
+								tb_row[ curr_index - offset ] = SIDE
 							else:
 								print("\t\t=>>> should not be here")
 							curr_row[ curr_index - offset] = min_val + INDEL
 
 
-
 					curr_index += 1
 					print("\n\t curr_row = " + str(curr_row))
 					curr[r] = curr_row
+					tb_table[r] = tb_row
 					print("\n\t current curr is : ")
 					print(str(curr))
 
@@ -226,9 +225,12 @@ class GeneSequencing:
 			center += 1
 			r += 1
 
-		print("\n\nFINAL table = ")
+		print("\n\n curr table = ")
 		print(str(curr))
 		print("\t\tshape = " + str(curr.shape))
+
+		print("tb_table = ")
+		print(str(tb_table))
 
 		keep_pushing = True
 		print("\nr = " + str(r) + "\n\n\n\n")
@@ -236,11 +238,24 @@ class GeneSequencing:
 			r -= 1
 			if ( curr[ r ][ 2 * MAXINDELS ] == np.inf ):
 				curr = self.pushRow( curr, r )
+				tb_table = self.pushRow( tb_table, r )
 			else:
 				keep_pushing = False
 
 		print("\n\nFINAL table = ")
 		print(str(curr))
+		print("\nFINAL tb_table = ")
+		print(str(tb_table))
+
+		dir = self.traceDirection( tb_table, True )
+
+		# print("\tDone back tracing. dir= " + str(dir))
+
+
+		seq1 = self.getSeq( t1, dir, False)
+		seq2 = self.getSeq( t2, dir, True)
+		print("seq1 = " + seq1)
+		print("seq2 = " + seq2)
 
 
 
@@ -267,22 +282,60 @@ class GeneSequencing:
 
 		return result
 
+	def includeInf( self, lst ):
+		return np.any( lst == np.inf )
 
-	def traceDirection( self, tb ):
+	def traceDirection( self, tb, banded=False ):
 		# print("\n\nGET SEQUENCE starting")
 		r = tb.shape[0] - 1
 		c = tb.shape[1] - 1
 		dir = [ tb[ r, c ] ]
 
 		while (r != 0) & (c != 0 ):
-			if   dir[0] == DIA:
-				r = r - 1
-				c = c - 1
-			elif dir[0] == SIDE:
-				c = c - 1
+			# print("\n\n\ncurrent dir = " + str(dir) + " ||| type = " + str(type(dir)))
+			# print("\tr before = " + str(r))
+			# print("\tc before = " + str(c))
+			if len(dir) > 15:
+				break
+			# print("\t\ttb[r] = " + str(tb[r]) + " of type " + str(type(tb[r])))
+			proceed_normally = True
+			if banded:
+				# print("\t\ttb["+str(r)+"] = " + str(tb[r]))
+				# print("\t\ttb["+str(r-1)+"] = " + str(tb[r-1]))
+				if self.includeInf(tb[r]) == True:
+					proceed_normally = True
+				elif ( self.includeInf(tb[r]) == False ) & ( self.includeInf(tb[r-1]) == True ):
+					proceed_normally = True
+				else:
+					proceed_normally = False
+
+
+
+			if proceed_normally == False:
+				# print("Procedding NOT normally")
+				if   dir[0] == DIA:
+					# print("\tDIA")
+					r = r - 1
+				elif dir[0] == SIDE:
+					# print("\tSIDE")
+					c = c - 1
+				else:
+					# print("\tUP")
+					r = r - 1
+					c = c + 1
 			else:
-				r = r - 1
-			dir.insert(0, tb[r,c] )
+				if   dir[0] == DIA:
+					# print("\tDIA")
+					r = r - 1
+					c = c - 1
+				elif dir[0] == SIDE:
+					# print("\tSIDE")
+					c = c - 1
+				else:
+					# print("\tUP")
+					r = r - 1
+			# print("\t\tINSERT: tb["+str(r)+"]["+str(c)+"] = " + str(tb[r][c]))
+			dir.insert(0, tb[r][c] )
 
 		dir.reverse()
 		return dir
@@ -295,7 +348,7 @@ class GeneSequencing:
 		results = []
 
 		# self.calcCostBanded('cataca', 'cotaca')
-		self.calcCostBanded(sequences[0], sequences[1])
+		# self.calcCostBanded(sequences[0], sequences[1])
 
 		# score, s1, s2 = self.calcCostUnrestricted(sequences[0], sequences[1])
 		# score, s1, s2 = self.calcCostUnrestricted('AGCTCATGC', 'ACTGCATC')
@@ -317,9 +370,11 @@ class GeneSequencing:
 					# print("\n\tseq[" + str(i) + "] = " + str(sequences[i][0:align_length]))
 					# print("\n\tseq[" + str(j) + "] = " + str(sequences[j][0:align_length]))
 
-					# score, seq1, seq2 = self.calcCostUnrestricted( sequences[i][0:align_length], sequences[j][0:align_length] )
-					seq1=''
-					seq2=''
+					if banded:
+						score, seq1, seq2 = self.calcCostBanded( sequences[i][0:align_length], sequences[j][0:align_length] )
+					else:
+						score, seq1, seq2 = self.calcCostUnrestricted( sequences[i][0:align_length], sequences[j][0:align_length] )
+
 					alignment1 = seq1 + '  DEBUG:(seq{}, {} chars,align_len={}{})'.format(i+1,
 						len(sequences[i]), align_length, ',BANDED' if banded else '')
 					alignment2 = seq2 + '  DEBUG:(seq{}, {} chars,align_len={}{})'.format(j+1,

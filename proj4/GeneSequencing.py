@@ -37,11 +37,11 @@ class GeneSequencing:
 
 	# return min cost of alignment
 	def calcCostUnrestricted( self, t1, t2):
-		# print("t1 = " + t1 + " ==== size = " + str(len(t1)))
-		# print("t2 = " + t2 + " ==== size = " + str(len(t2)))
+		if len(t2) > len(t1):
+			temp = t1
+			t1 = t2
+			t2 = temp
 
-		# row: t1 (horizontal)
-		# col: t2 (vertical)
 		curr = np.zeros( ( len( t1 ) + 1, len( t2 ) + 1 ) )
 		tb_table = np.zeros( ( len( t1 ) + 1, len( t2 ) + 1 ) )
 
@@ -53,46 +53,19 @@ class GeneSequencing:
 		tb_table[:,0] = [0] + [ UP ] * len(t1)
 		tb_table[0] = [0] + [ SIDE ] * len(t2)
 
-		# print("curr =\n" + str(curr))
-		# print("tb table = \n" + str(tb_table))
-
-
 		# for each row
 		for r in range(1,curr.shape[0]):
-			# print("\tcurr_row = " + str(curr[r]))
 			for c in range(1, curr.shape[1]):
-				# print("\n\tt1[" + str(r-1) + "]="+str(t1[r-1]))
-				# print("\n\tt2[" + str(c-1) + "]="+str(t2[c-1]))
 				if (t1[r-1] == t2[c-1]):
-					# print("\n\t\t=>> MATCH -- Diagonal!\n")
 					curr[r][c] = curr[r-1][c-1] + MATCH
 					tb_table[r][c] = DIA
 				else:
-					min_val = min( curr[r-1][c-1], curr[r][c-1], curr[r-1][c])
-					# print("\n\t\tcurr[" + str(r-1) + "][" + str(c-1) + "] is " + str(curr[r-1][c-1]))
-					# print("\t\tcurr[" + str(r-1) + "][" + str(c) + "] is " + str(curr[r-1][c]))
-					# print("\t\tcurr[" + str(r) + "][" + str(c-1) + "] is " + str(curr[r][c-1]))
-					# print("\t\tminval = " + str(min_val))
-					if curr[r-1][c-1] == min_val:
-						# print("\t\t=>>  Diagonal --- sub ")
-						tb_table[r][c] = DIA
-						curr[r][c] = min_val + SUB
-					else:
-						if curr[r-1][c] == min_val:
-							# print("\t\t=>>  UP --- ins ")
-							tb_table[r][c] = UP
-						else:
-							# print("\t\t=>>  SIDE --- del ")
-							tb_table[r][c] = SIDE
-						curr[r][c] = min_val + INDEL
-				# print("\n\tcurr after last  op:\n" + str(curr)+"\n\n\n")
-				# print("\n\ttb_table after last op:\n" + str(tb_table)+"\n\n\n")
-
-		# print("curr is \n" + str(curr))
-		# print("\n\ntb_table is \n" + str(tb_table))
+					min_val, direction_val = self.getMin( curr[r-1][c], curr[r-1][c-1], curr[r][c-1] )
+					curr[r][c] = min_val
+					tb_table[r][c] = direction_val
 
 		dir = self.traceDirection( tb_table )
-		# print("\tDone back tracing. dir= " + str(dir))
+
 
 		seq1 = self.getSeq( t1, dir, False )
 		seq2 = self.getSeq( t2, dir, True )
@@ -118,20 +91,15 @@ class GeneSequencing:
 
 
 	def calcCostBanded( self, t1, t2):
-		# print("\n\nBANDED")
-
 		if len(t2) > len(t1):
 			temp = t1
 			t1 = t2
 			t2 = temp
 		if len(t1)-len(t2)>MAXINDELS:
-			return np.inf, '', ''
+			return np.inf, 'No Alignment Possible.', 'No Alignment Possible.'
 
 		# print("\n\n\n t1 (vertical) = " + t1)
 		# print("\n\n\n t2 (horizontal) = " + t2)
-
-
-
 
 		curr = np.full( ( len(t1) + 1, 2*MAXINDELS+1 ), np.inf )
 		tb_table = np.full( curr.shape, np.inf )
@@ -147,8 +115,6 @@ class GeneSequencing:
 		center = 1
 		offset = 0
 		while r <= (len(t1)):
-			# print("\n\n\nr = " + str(r) + "\n")
-			# print("\n\n\noffset = " + str(offset) + "\n")
 
 			curr_index = offset # this is current column in curr [0:6]
 			curr_row = np.empty( 2 * MAXINDELS + 1 )
@@ -156,97 +122,46 @@ class GeneSequencing:
 			tb_row = np.empty( 2 * MAXINDELS + 1 )
 			tb_row.fill(np.inf)
 
-			# print("\n\n\ncurr_index= " + str(curr_index) + "\n")
-			# print("curr_row = " + str(curr_row))
-
 			for c in range( center - MAXINDELS, center + MAXINDELS + 1 ):
 				# c is the current col index of actual table
-				# print("\nc = " + str(c))
-				# print("\tcurr_index = " + str(curr_index))
-				if c < 0: #just the first few rows
-					# print("\tcol = c cannot be negative")
+				if c < 0:
 					pass
-				elif c == 0: # just the rows including base case of t1 (horizontal)
-					# print("\tAt base horizontal. Already calculated so leave alone")
+				elif c == 0:
 					curr_row[curr_index] = curr[r][c]
 					tb_row[curr_index] = UP
 					curr_index += 1
 
-				elif c == ( len(t2) + 1 ): # just the rows that include last row
-					# print("\tAt the last column. Returning")
+				elif c == ( len(t2) + 1 ):
 					break
 				else:
-					# print("\t[ r = " + str(r) + " ][ c = " + str(c) + " ] with letters: t1[] = " + t1[r-1] + ", t2[] = " + t2[c-1])
 
 					if t1[r-1] == t2[c-1]: # letter match
-						# print("\t\tMATCH")
-						# d = curr[ r - 1 ][ c - 1 ] + MATCH
 						curr_row[ curr_index - offset ] = curr[ r - 1 ][ curr_index - 1 ] + MATCH
 						tb_row[ curr_index - offset ] = DIA
 
-
 					else:
-						# print("\n\tThree things to consider:")
 						if curr_index > 6:
 							up = np.inf
-							# print("\t\tleft is just inf. outo of bound.")
 						else:
 							up = curr[ r - 1 ][ curr_index ]
-							# print("\t\tcurr["+str(r-1)+"]["+str(curr_index)+"] = " + str(up) )
 						diagonal = curr[ r - 1 ][ curr_index - 1 ]
-						# print("\t\tcurr["+str(r-1)+"]["+str(curr_index-1)+"] = " + str(diagonal) )
 						left = curr[ r ][ curr_index - offset - 1 ]
-						# print("\t\tcurr["+str(r)+"]["+str(curr_index - offset -1)+"] = " + str(left))
 
-
-						min_list = [ diagonal, up, left ]
-						# print('\t\tminlist = ' + str(min_list))
-						min_val = min( min_list )
-						# print("\t\tminval = " + str(min_val))
-						if diagonal == min_val:
-							# print("\t\t=>>  Diagonal --- sub ")
-							# tb_table[r][c] = DIA
-							curr_row[ curr_index - offset ] = min_val + SUB
-							tb_row[ curr_index - offset ] = DIA
-
-
-
-						else:
-							if up == min_val:
-								# print("\t\t=>>  UP --- ins ")
-								tb_row[ curr_index - offset ] = UP
-							elif left == min_val:
-								# print("\t\t=>>  SIDE --- del ")
-								tb_row[ curr_index - offset ] = SIDE
-							# else:
-								# print("\t\t=>>> should not be here")
-							curr_row[ curr_index - offset] = min_val + INDEL
-
+						min_val, direction_val = self.getMin( up, diagonal, left )
+						curr_row[ curr_index - offset ] = min_val
+						tb_row[ curr_index - offset ] = direction_val
 
 					curr_index += 1
-					# print("\n\t curr_row = " + str(curr_row))
 					curr[r] = curr_row
 					tb_table[r] = tb_row
-					# print("\n\t current curr is : ")
-					# print(str(curr))
 
-			# print("\n\t Finish one row. current curr is : ")
-			# print(str(curr))
 			if curr_index > 6:
 				offset = 1
 
 			center += 1
 			r += 1
 
-		# print("\n\n curr table = ")
-		# print(str(curr))
-		# print("\t\tshape = " + str(curr.shape))
-
-		# print("tb_table = ")
-		# print(str(tb_table))
-
 		keep_pushing = True
-		# print("\nr = " + str(r) + "\n\n\n\n")
 		while( keep_pushing ):
 			r -= 1
 			if ( curr[ r ][ 2 * MAXINDELS ] == np.inf ):
@@ -255,22 +170,27 @@ class GeneSequencing:
 			else:
 				keep_pushing = False
 
-		# print("\n\nFINAL table = ")
-		# print(str(curr))
-		# print("\nFINAL tb_table = ")
-		# print(str(tb_table))
-
 		dir = self.traceDirection( tb_table, True )
-
-		# print("\tDone back tracing. dir= " + str(dir))
+		# print("\n\n\n\n\tDone back tracing. dir= " + str(dir))
+		# print("\n\n\tDone back tracing. dir= " + str(dir))
+		# print("\t\t\twith len = " + str(len(dir)))
 
 
 		seq1 = self.getSeq( t1, dir, False)
 		seq2 = self.getSeq( t2, dir, True)
-		# print("seq - vertical = " + seq1)
-		# print("seq - horizontal = " + seq2)
 
 		return curr[-1,-1], seq1, seq2
+
+
+
+	def getMin( self, up, diagonal, left ):
+		min_val = min( [ up + INDEL , diagonal + SUB, left + INDEL ] )
+		if min_val == ( diagonal + SUB ):
+			return min_val, DIA
+		elif min_val == ( up + INDEL ):
+			return min_val, UP
+		else:
+			return min_val, SIDE
 
 
 
@@ -300,21 +220,14 @@ class GeneSequencing:
 
 	def traceDirection( self, tb, banded=False ):
 		# print("\n\nGET SEQUENCE starting")
+		# print("\ntb is "+ str(tb.shape) + "\n" + str(tb))
 		r = tb.shape[0] - 1
 		c = tb.shape[1] - 1
 		dir = [ tb[ r, c ] ]
-
-		while (r != 0) & (c != 0 ):
-			# print("\n\n\ncurrent dir = " + str(dir) + " ||| type = " + str(type(dir)))
-			# print("\tr before = " + str(r))
-			# print("\tc before = " + str(c))
-			if len(dir) > 15:
-				break
-			# print("\t\ttb[r] = " + str(tb[r]) + " of type " + str(type(tb[r])))
+		count = 0
+		while (r != 0) | (c != 0 ):
 			proceed_normally = True
 			if banded:
-				# print("\t\ttb["+str(r)+"] = " + str(tb[r]))
-				# print("\t\ttb["+str(r-1)+"] = " + str(tb[r-1]))
 				if self.includeInf(tb[r]) == True:
 					proceed_normally = True
 				elif ( self.includeInf(tb[r]) == False ) & ( self.includeInf(tb[r-1]) == True ):
@@ -322,33 +235,27 @@ class GeneSequencing:
 				else:
 					proceed_normally = False
 
-
-
 			if proceed_normally == False:
-				# print("Procedding NOT normally")
+
 				if   dir[0] == DIA:
-					# print("\tDIA")
 					r = r - 1
 				elif dir[0] == SIDE:
-					# print("\tSIDE")
 					c = c - 1
 				else:
-					# print("\tUP")
 					r = r - 1
 					c = c + 1
+
 			else:
 				if   dir[0] == DIA:
-					# print("\tDIA")
 					r = r - 1
 					c = c - 1
 				elif dir[0] == SIDE:
-					# print("\tSIDE")
 					c = c - 1
 				else:
-					# print("\tUP")
 					r = r - 1
-			# print("\t\tINSERT: tb["+str(r)+"]["+str(c)+"] = " + str(tb[r][c]))
+
 			dir.insert(0, tb[r][c] )
+			count += 1
 
 		dir.reverse()
 		return dir
@@ -361,13 +268,18 @@ class GeneSequencing:
 		results = []
 
 		# self.calcCostBanded('cataca', 'cotaca')
-		# self.calcCostBanded(sequences[0], sequences[1])
 
-		# score, s1, s2 = self.calcCostUnrestricted(sequences[0], sequences[1])
-		# score, s1, s2 = self.calcCostUnrestricted('AGCTCATGC', 'ACTGCATC')
+
+		# if banded == False:
+		# 	score, s1, s2 = self.calcCostUnrestricted(sequences[0], sequences[1])
+		# else:
+		# score, s1, s2 = self.calcCostBanded(sequences[8][0:align_length], sequences[9][0:align_length])
 		# print("s1 = " + s1)
 		# print("s2 = " + s2)
-		# print("score= " + score)
+		# #
+		# print("\n\n\n\nlen s1 = " + str(len(s1)))
+		# print("\nlen s2 = " + str(len(s2)))
+		# print("score= " + str(score))
 
 
 		for i in range(len(sequences)):
@@ -377,23 +289,23 @@ class GeneSequencing:
 				if(j < i):
 					s = {}
 				else:
-###################################################################################################
-# your code should replace these three statements and populate the three variables: score, alignment1 and alignment2
-					# score = i+j;
-					# print("\n\tseq[" + str(i) + "] = " + str(sequences[i][0:align_length]))
-					# print("\n\tseq[" + str(j) + "] = " + str(sequences[j][0:align_length]))
 
 					if banded:
-						score, seq1, seq2 = self.calcCostBanded( sequences[i][0:align_length], sequences[j][0:align_length] )
+						score, alignment1, alignment2 = self.calcCostBanded( sequences[i][0:align_length], sequences[j][0:align_length] )
+						# print("\nalignment1[0:100] = " + alignment1[0:100])
+						# print("\n\t\twith len = " + str(len(alignment1[0:100])))
+						#
+						# print("\nalignment2[0:100] = " + alignment2[0:100])
+						# print("\n\t\twith len = " + str(len(alignment2[0:100])))
 					else:
-						score, seq1, seq2 = self.calcCostUnrestricted( sequences[i][0:align_length], sequences[j][0:align_length] )
+						score, alignment1, alignment2 = self.calcCostUnrestricted( sequences[i][0:align_length], sequences[j][0:align_length] )
 
-					alignment1 = seq1 + '  DEBUG:(seq{}, {} chars,align_len={}{})'.format(i+1,
-						len(sequences[i]), align_length, ',BANDED' if banded else '')
-					alignment2 = seq2 + '  DEBUG:(seq{}, {} chars,align_len={}{})'.format(j+1,
-						len(sequences[j]), align_length, ',BANDED' if banded else '')
-###################################################################################################
-					s = {'align_cost':score, 'seqi_first100':alignment1, 'seqj_first100':alignment2}
+					# alignment1 = seq1 + '  DEBUG:(seq{}, {} chars,align_len={}{})'.format(i+1,
+					# 	len(sequences[i]), align_length, ',BANDED' if banded else '')
+					# alignment2 = seq2 + '  DEBUG:(seq{}, {} chars,align_len={}{})'.format(j+1,
+					# 	len(sequences[j]), align_length, ',BANDED' if banded else '')
+
+					s = {'align_cost':score, 'seqi_first100':alignment1[0:100], 'seqj_first100':alignment2[0:100]}
 					table.item(i,j).setText('{}'.format(int(score) if score != math.inf else score))
 					table.repaint()
 				jresults.append(s)

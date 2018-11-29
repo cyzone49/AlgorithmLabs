@@ -52,7 +52,7 @@ class PointLineView( QWidget ):
 		if removeColors:							# allows removal of edge labels without removing node labels, for example
 			for color in removeColors:
 				if color in self.labelList:
-					del self.labelList[color]			
+					del self.labelList[color]
 		else:
 			self.labelList = {}
 		self.repaint()
@@ -86,7 +86,7 @@ class PointLineView( QWidget ):
 		else:
 			self.edgeList[edgeColor] = [edge]
 
-		midp = QPointF( (edge.x1()*0.2 + edge.x2()*0.8), 
+		midp = QPointF( (edge.x1()*0.2 + edge.x2()*0.8),
 						(edge.y1()*0.2 + edge.y2()*0.8) )
 		self.addLabel( midp, label, labelColor, xoffset=xoffset )
 
@@ -198,7 +198,7 @@ class Proj5GUI( QMainWindow ):
 
 		self.RED_STYLE	 = "background-color: rgb(255, 220, 220)"
 		self.PLAIN_STYLE = "background-color: rgb(255, 255, 255)"
-		self._MAX_SEED = 1000 
+		self._MAX_SEED = 1000
 
 		self._scenario = None
 		self.initUI()
@@ -206,8 +206,8 @@ class Proj5GUI( QMainWindow ):
 		self.genParams = {'size':None,'seed':None,'diff':None}
 
 
-	   
-	def newPoints(self):		
+
+	def newPoints(self):
 		# TODO - ERROR CHECKING!!!!
 		seed = int(self.curSeed.text())
 		random.seed( seed )
@@ -364,7 +364,7 @@ class Proj5GUI( QMainWindow ):
 			widget.setStyleSheet( '' )
 
 		return '' if retval==None else retval
-			
+
 	ALGORITHMS = [ \
 		('Default                            ','defaultRandomTour'), \
 		('Greedy','greedy'), \
@@ -396,9 +396,9 @@ class Proj5GUI( QMainWindow ):
 
 		self.curSeed		= QLineEdit('20')
 		self.curSeed.setFixedWidth(100)
-		self.size			= QLineEdit('15')
+		self.size			= QLineEdit('5')
 		self.size.setFixedWidth(50)
-		self.timeLimit		= QLineEdit('60')
+		self.timeLimit		= QLineEdit('10')
 		self.timeLimit.setFixedWidth(50)
 		self.numSolutions	= QLineEdit('--')
 		self.numSolutions.setFixedWidth(100)
@@ -453,7 +453,7 @@ class Proj5GUI( QMainWindow ):
 		h.addWidget( self.generateButton )
 		h.addStretch(1)
 		vbox.addLayout(h)
-		
+
 		h = QHBoxLayout()
 		h.addWidget( QLabel('Algorithm: ') )
 		h.addWidget( self.algDropDown )
@@ -518,7 +518,7 @@ class Proj5GUI( QMainWindow ):
 if __name__ == '__main__':
 	# This line allows CNTL-C in the terminal to kill the program
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
-	
+
 	app = QApplication(sys.argv)
 	w = Proj5GUI()
 	sys.exit(app.exec())

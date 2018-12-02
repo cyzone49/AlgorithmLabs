@@ -315,37 +315,43 @@ class TSPSolver:
 					new_State = self.State( new_route,  new_cost, new_bound, m)
 
 					if len(new_route) == len(self._scenario.getCities()):
-						print("\n~~~~~~~~~~FOUND SOLUTION~~~~~~~~~~~~")
-						print(str(new_State))
-						BSSF = new_cost
-						for state in q.queue:
-							# print(str(state))
-							if state.item._bound < BSSF:
-								q.remove(state)
-						return q, BSSF
 
-					print("\t\tnew_route[" + str(len(new_route)) + "] = " + str(new_route))
-					print("\t\tnew_cost = " + str(new_cost))
-					print("\t\tnew_bound = " + str(new_bound))
-					print("\t\tnew_matrix =\n" + str(m))
+						cost_back = city.costTo(self._scenario.getCities()[0])
+						if cost_back != np.inf:
+							print("~~~~~~YESSSSSS~~~~~~~~ FOUND NEW SOLUTION~~~~~~~~~~~~")
+							print(str(new_State))
+							BSSF = new_cost + cost_back
+							new_queue = PriorityQueue()
+							for state in q.queue:
+								# print(str(state))
+								if state.item._bound < BSSF:
+									# q.remove(state)
+									new_queue.put(self.Prioritize(state.item._bound, state.item))
 
+							return new_queue, BSSF, False
+						else:
+							print("~~~~~FALSE ALARM~~~~~~. No way back")
+					else:
+						# print("\n\nCurrent queue is: ")
+						# self.printQueue(q)
+						print("\t\tnew_route[" + str(len(new_route)) + "] = " + str(new_route))
+						print("\t\tnew_cost = " + str(new_cost))
+						print("\t\tnew_bound = " + str(new_bound))
+						print("\t\tnew_matrix =\n" + str(m))
+						# print("\n\n\t*********Preparing to PUT***********\n")
+						# print("\n\tNo problem creating new STATE. new State is :\n" + str(dddd))
+						# self.printQueue(q)
 
-					print("\n\n\t*********Preparing to PUT***********\n")
+						q.put( self.Prioritize(new_bound, new_State) )
+						print("\n\tSucceeded put() op.")
 
-					#
-					# print("\n\tNo problem creating new STATE. new State is :\n" + str(dddd))
-					# self.printQueue(q)
-
-					q.put( self.Prioritize(new_bound, new_State) )
-					print("\n\tSucceeded put() op.")
-
-					# q.put( ( new_bound, self.State( new_route,  new_cost, new_bound, m) ) )
-					# self.cities_traveled += 1
+						# q.put( ( new_bound, self.State( new_route,  new_cost, new_bound, m) ) )
+						# self.cities_traveled += 1
 
 			# else:
 			# 	print("\n\tAlready travled to city " + str(city._name) + " on this route! ")
 
-		return q, BSSF
+		return q, BSSF, True
 
 
 
@@ -360,7 +366,7 @@ class TSPSolver:
 		# bssf == TSPSolution( route )
 		# print("BSSF = " + str(BSSF))
 
-		BSSF = self.genBSSF( ncities )   # init BSSF
+		working_BSSF = self.genBSSF( ncities )   # init BSSF
 		route = [ cities[0]._name ]      # route of init state -- contains NAMES of cities
 		cost  = 0                        # cost  of init state
 		count = 0                        # number of states passed
@@ -373,16 +379,21 @@ class TSPSolver:
 		# q.put((12, self.State( [ cities[0], cities[1] ], cities[0].costTo(cities[1]), 12, np.zeros((5,5)))))
 		# self.printQueue(q)
 
+
+
 		start_time = time.time()
 		while not q.empty() and time.time()-start_time < time_allowance:
-			print("\n\n\n\n\nQueue is NOT empty! keep calling explore() with BSSF = " + str(BSSF))
-			q,BSSF = self.explore( q, BSSF )
+			print("\n\n\n\n\nQueue is NOT empty! keep calling explore() with working_BSSF = " + str(working_BSSF))
+			q,working_BSSF,route = self.explore( q, working_BSSF )
 
-			print("\n\nOut of list of cities in from parent_city.")
+			print("\n\nOut of list of cities in from parent_city.\n\tworking_BSSF = " + str(working_BSSF))
 			# print("\nprinting parent state here\n")
 			# print(str(parent_state))
 			print("\nnew Queue is: ")
 			self.printQueue(q)
+			if route != None:
+				bssf = TSPSolution( route )
+				break
 
 
 
@@ -391,17 +402,19 @@ class TSPSolver:
 			# if bssf.cost < np.inf:
 			# 	# Found a valid route
 			# 	foundTour = True
-
+		print("\n\nOut of While Loop")
 		end_time = time.time()
-		# results['cost'] = bssf.cost if foundTour else math.inf
-		# results['time'] = end_time - start_time		#
-		# # print("ncities ( " + str(ncities) + " ) --- type: " + str(type(cities)) + "\n")
-		# # self.printCities(cities
-		# results['count'] = count
-		# results['soln'] = BSSF
-		# results['max'] = None
-		# results['total'] = None
-		# results['pruned'] = None
+
+
+		results['cost'] = bssf.cost if foundTour else math.inf
+		results['time'] = end_time - start_time		#
+		# print("ncities ( " + str(ncities) + " ) --- type: " + str(type(cities)) + "\n")
+		# self.printCities(cities
+		results['count'] = count
+		results['soln'] = bssf
+		results['max'] = None
+		results['total'] = None
+		results['pruned'] = None
 		return results
 
 

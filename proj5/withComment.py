@@ -109,7 +109,6 @@ class TSPSolver:
 		max queue size, total number of states created, and number of pruned states.</returns>
 	'''
 
-	# debugging function
 	def printQueue( self, q ):
 		if len(q.queue) == 0:
 			print("\n\nEmpty Queue!\n")
@@ -119,19 +118,17 @@ class TSPSolver:
 		for i in q.queue:
 			print(str(i.item))
 
-	# debugging function
 	def printCost(self, city):
 		print("\n\tCost to other cities from city " + str(city._name))
 		for dest in city._scenario._cities:
 			print("\t -> " + str(dest._name) + " = " + str(city.costTo(dest)))
 
-	# generate init BSSF
-	# gen by running defaultRandomTour function
+	# for now gen by running defaultRandomTour function
 	def genBSSF( self, times ):
 		max_cost = np.inf
 		BSSF = None
 
-		# only try 14000 times max
+		# only try 100 times max
 		if times > 14000:
 			times = 14000
 
@@ -143,7 +140,6 @@ class TSPSolver:
 				max_cost = curr['cost']
 		return BSSF
 
-	# generate a cost matrix for initialization process ( each city to each city )
 	def genMatrix( self, cities ):
 		m = np.zeros((len(cities), len(cities)))
 		for src in cities:
@@ -151,7 +147,6 @@ class TSPSolver:
 				m[ src._index, dest._index ] = src.costTo(dest)
 		return m
 
-	# perform operation to generate reduced cost matrix ( O(n^2) )
 	def reduceCost( self, m ):
 		# print("\nStarting reduceCost().......")
 		bound = 0
@@ -165,7 +160,6 @@ class TSPSolver:
 				bound += tmp
 		return m, bound
 
-	# reduce the passed in row/column
 	def reduceList( self, lst ):
 		if 0 not in lst:
 			newLst = []
@@ -176,7 +170,6 @@ class TSPSolver:
 		else:
 			return lst, 0
 
-	# class State: data structure to store states/nodes
 	class State:
 		def __init__( self, route, cost, bound, matrix ):
 			self._route = route
@@ -205,6 +198,7 @@ class TSPSolver:
 			return self._matrix
 
 		def printRoute( self ):
+			# print("printing route in STATE.....")
 			ret = " [ "
 			for city_name in self._route:
 				ret += str(city_name)
@@ -215,8 +209,6 @@ class TSPSolver:
 
 
 
-	# class Prioritize: used to set priority class for priority queue
-	# based on 2 things: (1) len of route, (2) bound
 	@functools.total_ordering
 	class Prioritize:
 		def __init__(self, priority, item):
@@ -227,13 +219,22 @@ class TSPSolver:
 			return self.priority[0] == other.priority[0]
 
 		def __lt__(self, other):
+			# print("calling LT")
+			# return self.priority[0] < other.priority[0]
+			# print("Prioritize: self.priority[0] = " + str(self.priority[0]) + " || other.priority[0] = " + str(other.priority[0]))
 			if self.priority[0] > other.priority[0]:
 				return True
 			else:
-				return self.priority[1] < other.priority[1]
+			# 	print("Prioritize: self.priority[1] = " + str(self.priority[1]) + " || other.priority[1] = " + str(other.priority[1]))
+				if self.priority[1] < other.priority[1]:
+			# 		print("return True (less than)")
+					return True
+				else:
+			# 		print("return False")
+					return False
+				# return self.priority[1] < other.priority[1]
 
-	# return a list of cities objects based on a route list that
-	# contains only names (str) of cities in that route
+
 	def extractRoute( self, route ):
 		# print("\n\n\n\n\n~~~~~Starting extractRoute()~~~~~~~")
 		result = []
@@ -247,16 +248,24 @@ class TSPSolver:
 		return result
 
 
-	# go into a state, calculate its reduced cost matrix, then generate children
-	# and add children states that qualify into priority queue
-	# return: (1) queue, (2) bssf_cost, (3) solution state (if found), (4) number of states created
+
 	def explore( self, q, BSSF ):
 		# print("\n\n\n\nStarting explore()...............")
+		#
+		# print("\n\n\n\nPRINT QUEUE")
+		# self.printQueue(q)
 
-		# grab top state in PriorityQueue
 		top = q.get()
 		parent_state = top.item
 		states = 0
+
+		# print("\n\n\n\n ~~PARENT STATE~~ \n")
+		# print(str(parent_state.printRoute()))
+		# print("\n\n\n\nPRINT QUEUE")
+		# self.printQueue(q)
+
+
+		# parent_city = parent_state.getRoute()[-1]
 
 		# grab city object of current city in route (last one in route)
 		parent_city = next((city for city in self._scenario.getCities() if city._name == parent_state.getRoute()[-1]), None)
@@ -284,9 +293,15 @@ class TSPSolver:
 
 					# if all cities are now traveled too (present in route)
 					if len(new_route) == len(self._scenario.getCities()):
+
 						cost_back = city.costTo(self._scenario.getCities()[0])
 						# check if current route creates a cycle (leads back to first city)
 						if cost_back != np.inf:
+							# print("\n\n\n\n~~~~~~~~~~~~~~FOUND NEW SOLUTION~~~~~~~~~~~~\n")
+							# # print(new_State)
+							# print("\tSolution cost  = " + str(new_State._cost + cost_back))
+							# print("\tSolution route = " + str(new_State._route))
+
 							# check to see if that solution improves the previous best solution (so far)
 							if BSSF > ( new_State._cost + cost_back ):
 								# print("\n\n\nUpdating BSSF!!!")
@@ -297,16 +312,17 @@ class TSPSolver:
 
 		return q, BSSF, None, states
 
-	# prune states that does not qualify in priority queue
-	# any state that has bound > bssf would not qualify => dequeued
 	def prune( self, q, bssf ):
-		# print("Pruning...........")
+		print("Pruning...........")
 		new_queue = PriorityQueue()
 		for state in q.queue:
 			if ( state.item._bound < bssf.cost ):
 				new_queue.put(self.Prioritize( ( len( state.item._route ), state.item._bound ), state.item ) )
 				# self.printQueue(new_queue)
 		pruned = len(q.queue) - len(new_queue.queue)
+		print("queue size decrease after prune by: " + str( pruned ) )
+		# print("\n\n\n\nnew queue:")
+
 		return new_queue, pruned
 
 
@@ -316,8 +332,10 @@ class TSPSolver:
 		ncities = len(cities)
 
 
-		# INIT process
-		init_solution = self.genBSSF( ncities / 10 )
+		# INIT
+		init_solution = self.genBSSF( ncities * 500 )
+
+		# init_solution = self.genBSSF( 1 )
 		current_bssf_cost = init_solution['cost']   # init BSSF
 		bssf 			  = init_solution['soln']
 		q 				  = PriorityQueue()
@@ -334,17 +352,12 @@ class TSPSolver:
 		q.put(self.Prioritize( (len(bssf.route),bound), self.State( route, cost, bound, newM )))
 
 		print("init bssf.cost = " + str(current_bssf_cost))
+		# print(bssf)
 
 		start_time = time.time()
-
-		# run while time permits and queue is not empty
 		while not q.empty() and time.time()-start_time < time_allowance:
 
-			# call explore() to get back new queue, new bssf, new solution state (if found),
-			# and number of states created during that explore() call
 			q, re_bssf, solution_state, curr_states_num = self.explore( q, current_bssf_cost )
-
-			# update max and total
 			if len(q.queue) > max:
 				max = len(q.queue)
 			total += curr_states_num
@@ -365,13 +378,27 @@ class TSPSolver:
 				new_queue, curr_prune = self.prune( q, bssf )
 				pruned += curr_prune
 
+				# print("lenQueue = " + str(len(q.queue)))
+			# else:
+			# 	print(" nope ")
+
+
 		end_time = time.time()
 
-		# add to pruned number of states left in queue
+
+		print("\n\nOut of While Loop\n")
+		if foundTour == True:
+			print("YES --- foundTour = TRUE\n\n")
+			print(str(len(q.queue)))
+		else:
+			print("NO  --- foundTour = FALSE\n\n")
+
 		pruned += len(q.queue)
 
 		results['cost'] = bssf.cost if foundTour else math.inf
-		results['time'] = end_time - start_time
+		results['time'] = end_time - start_time		#
+		# print("ncities ( " + str(ncities) + " ) --- type: " + str(type(cities)) + "\n")
+
 		results['count'] = count
 		results['soln'] = bssf
 		results['max'] = max

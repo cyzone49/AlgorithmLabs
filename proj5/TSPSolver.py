@@ -43,13 +43,17 @@ class TSPSolver:
 	'''
 
 	def printCities(self, cities):
-		print("\n************** Printing cities **************")
+		# res = "\n************** Printing cities **************\n"
+		res = "["
 		for city in cities:
-			print("\n -  name        = " + str(city._name))
-			print(" -  coordinates = ( " + str(city._x) + ", " + str(city._y) + " )")
-			print(" -  elevation   = " + str(city._elevation))
-			print(" -  index       = " + str(city._index))
-			self.printCost(city)
+			res += str(city._name) + "  "
+			# print("\n -  name        = " + str(city._name))
+			# print(" -  coordinates = ( " + str(city._x) + ", " + str(city._y) + " )")
+			# print(" -  elevation   = " + str(city._elevation))
+			# print(" -  index       = " + str(city._index))
+			# self.printCost(city)
+		res += "]"
+		return res
 
 
 	def defaultRandomTour( self, time_allowance=60.0 ):
@@ -98,7 +102,79 @@ class TSPSolver:
 
 	#TODO: modify to implement greedy approach.
 	def greedy( self,time_allowance=60.0 ):
-		pass
+		# pass
+		results = {}
+		cities = self._scenario.getCities()
+		ncities = len(cities)
+
+		foundTour   	  = False
+		passed_cities = []
+
+		src_city = self._scenario.getCities()[0]
+
+		start_time = time.time()
+		# run while time permits and queue is not empty
+		while not foundTour and time.time()-start_time < time_allowance:
+			snd_city = self.findNearest( 0, passed_cities )
+			route = [ src_city, snd_city ]
+
+			while len( route ) != ncities:
+				dest = self.findNearest( route[-1]._index, route )
+				if dest == None:
+					# print("NONE HERE")
+					break
+				route.append( dest )
+
+			if len(route) != ncities:
+				passed_cities.append( snd_city )
+				# print("OUT prematurely! passed_cities is: " + str(self.printCities(passed_cities)))
+				continue
+
+			elif route[-1].costTo( src_city ) == np.inf:
+				passed_cities.append( snd_city )
+				# print("Not a cycle! passed_cities is: " + str(self.printCities(passed_cities)))
+
+			else:
+				print("Found solution !")
+				# print("OUT: route["+ str(len(route))+"] = ")
+				# print(self.printCities(route))
+				foundTour = True
+				bssf = TSPSolution( route )
+
+		end_time = time.time()
+
+		if foundTour == False:
+			return None
+
+		# print("Finished while loop. route = " + str(self.printCities(route)))
+
+		results['cost'] = bssf.cost if foundTour else math.inf
+		results['time'] = end_time - start_time
+		results['count'] = None
+		results['soln'] = bssf
+		results['max'] = None
+		results['total'] = None
+		results['pruned'] = None
+		return results
+
+	# from src (with passed-in index) find the nearest city that is not already in route
+	def findNearest( self, src_index, route ):
+		src = self._scenario.getCities()[ src_index ]
+		min = np.inf
+		res = None
+		for city in list( set(self._scenario.getCities()).difference(route)):
+			cost = src.costTo(city)
+			if cost < min:
+				min = cost
+				res = city
+
+		return res
+
+
+
+
+
+
 
 	''' <summary>
 		This is the entry point for the branch-and-bound algorithm that you will implement
